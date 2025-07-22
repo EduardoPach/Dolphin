@@ -19,7 +19,7 @@ REPO_ID = "ByteDance/Dolphin"
 
 FOX_PAGE_EN_DIR = Path("dataset/Fox-Page-Benchmark/en")
 RESULT_DIR = Path("result-fox-page-en")
-EVALUATION_RESULTS_PATH = Path("datasets/evaluation_results.csv")
+EVALUATION_RESULTS_PATH = Path("dataset/evaluation_results.csv")
 
 ############## Download Data ###############
 # After finishing the download an unzip you should have a directory structure like this:
