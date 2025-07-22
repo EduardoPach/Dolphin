@@ -8,7 +8,7 @@ import rich
 import gdown
 import jiwer
 import pandas as pd
-from huggingface_hub import hf_hub_download
+from huggingface_hub import snapshot_download
 
 FILE_ID = "1yZQZqI34QCqvhB4Tmdl3X_XEvYvQyP0q"
 URL_TEMPLATE = "https://drive.google.com/uc?id={file_id}"
@@ -84,7 +84,7 @@ def load_predictions(dir_path: Path) -> pd.DataFrame:
 
 # Equivalent to `huggingface-cli download ByteDance/Dolphin --local-dir ./hf_model`
 def download_hf_model() -> None:
-    hf_hub_download(
+    snapshot_download(
         repo_id=REPO_ID,
         local_dir=HF_MODEL_DIR,
     )
