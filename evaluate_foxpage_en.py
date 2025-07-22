@@ -35,12 +35,21 @@ EVALUATION_RESULTS_PATH = Path("datasets/evaluation_results.csv")
 # 8 directories
 
 
-def download_data() -> None:
+def download_data(force: bool = False) -> None:
+    if not force and os.path.exists(ZIP_PATH):
+        print(f"Dataset already exists at {ZIP_PATH}, skipping download...")
+        return
+    
     url = URL_TEMPLATE.format(file_id=FILE_ID)
     os.makedirs(os.path.dirname(ZIP_PATH), exist_ok=True)
     gdown.download(url, output=ZIP_PATH, quiet=False)
 
-def unzip_data() -> None:
+def unzip_data(force: bool = False) -> None:
+    # Check if dataset directory already exists and has content
+    if not force and FOX_PAGE_EN_DIR.exists() and any(FOX_PAGE_EN_DIR.iterdir()):
+        print(f"Dataset already extracted at {FOX_PAGE_EN_DIR}, skipping extraction...")
+        return
+    
     # Create the dataset directory if it doesn't exist
     os.makedirs(UNZIP_DIR, exist_ok=True)
 
@@ -83,14 +92,23 @@ def load_predictions(dir_path: Path) -> pd.DataFrame:
 ############## Runs Inference ###############
 
 # Equivalent to `huggingface-cli download ByteDance/Dolphin --local-dir ./hf_model`
-def download_hf_model() -> None:
+def download_hf_model(force: bool = False) -> None:
+    if not force and os.path.exists(HF_MODEL_DIR) and any(Path(HF_MODEL_DIR).iterdir()):
+        print(f"Model already downloaded at {HF_MODEL_DIR}, skipping download...")
+        return
+    
     snapshot_download(
         repo_id=REPO_ID,
         local_dir=HF_MODEL_DIR,
     )
 
 # Equivalent to `python demo_page_hf.py --model_path ./hf_model --input_path ./demo/page_imgs --save_dir ./results`
-def run_inference(input_path: str, save_dir: str) -> None:
+def run_inference(input_path: str, save_dir: str, force: bool = False) -> None:
+    result_dir = Path(save_dir) / "recognition_json"
+    if not force and result_dir.exists() and any(result_dir.glob("*.json")):
+        print(f"Inference results already exist at {result_dir}, skipping inference...")
+        return
+    
     subprocess.run(
         [
             "python",
@@ -173,14 +191,23 @@ def display_results(df: pd.DataFrame, global_cer: float) -> None:
         console.print(Panel(sample_table, title="[bold yellow]Sample Results", border_style="yellow"))
 
 
-def main():
+def main(force: bool = False):
+    """
+    Run the complete evaluation pipeline.
+    
+    Args:
+        force: If True, force execution of all stages even if files already exist.
+               If False, skip stages where output files already exist.
+    """
+    print(f"Running evaluation pipeline (force={force})...")
+    
     # Prepare Data
-    download_data()
-    unzip_data()
+    download_data(force=force)
+    unzip_data(force=force)
     # Download Model
-    download_hf_model()
+    download_hf_model(force=force)
     # Run Inference
-    run_inference(input_path=str(FOX_PAGE_EN_DIR / "img"), save_dir=str(RESULT_DIR))
+    run_inference(input_path=str(FOX_PAGE_EN_DIR / "img"), save_dir=str(RESULT_DIR), force=force)
     # Load Predictions
     predictions = load_predictions(RESULT_DIR / "recognition_json")
     # Load Ground Truth
@@ -193,4 +220,11 @@ def main():
     display_results(df, global_cer)
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Evaluate Dolphin model on Fox-Page benchmark")
+    parser.add_argument("--force", action="store_true", 
+                       help="Force execution of all stages even if files already exist")
+    
+    args = parser.parse_args()
+    main(force=args.force)
